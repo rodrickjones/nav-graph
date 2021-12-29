@@ -1,51 +1,49 @@
-package com.rodrickjones.navgraph.vertices;
+package com.rodrickjones.navgraph.vertex;
+
+import lombok.NonNull;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.Objects;
 
-public class Vertex {
+public class VertexLiteral implements Vertex {
     private final int x;
     private final int y;
     private final int z;
 
-    public Vertex(int x, int y, int z) {
+    public VertexLiteral(int x, int y, int z) {
         this.x = x;
         this.y = y;
         this.z = z;
     }
 
-    public Vertex(int hashCode) {
-        this(hashCode & 16383, hashCode >> 14 & 16383, hashCode >> 28 & 3);
-    }
-
-    public int getX() {
+    @Override
+    public int x() {
         return x;
     }
 
-    public int getY() {
+    @Override
+    public int y() {
         return y;
     }
 
-    public int getZ() {
+    @Override
+    public int z() {
         return z;
-    }
-
-    public Vertex derive(int dx, int dy, int dz) {
-        return new Vertex(x + dx, y + dy, z + dz);
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        Vertex vertex = (Vertex) o;
+        VertexLiteral vertex = (VertexLiteral) o;
         return x == vertex.x && y == vertex.y && z == vertex.z;
     }
 
     @Override
     public int hashCode() {
-        return hashCode(x, y, z);
+        return Objects.hash(x, y, z);
     }
 
     @Override
@@ -58,14 +56,16 @@ public class Vertex {
     }
 
     public void writeToDataStream(DataOutputStream dataOutputStream) throws IOException {
-        dataOutputStream.writeInt(hashCode());
+        dataOutputStream.writeInt(x);
+        dataOutputStream.writeInt(y);
+        dataOutputStream.writeInt(z);
     }
 
-    public static Vertex readFromDataStream(DataInputStream dataInputStream) throws IOException {
-        return new Vertex(dataInputStream.readInt());
+    public static VertexLiteral readFromDataStream(DataInputStream dataInputStream) throws IOException {
+        return new VertexLiteral(dataInputStream.readInt(), dataInputStream.readInt(), dataInputStream.readInt());
     }
 
-    public static int hashCode(int x, int y, int z) {
-        return z << 28 | y << 14 | x;
+    public static VertexLiteral derive(@NonNull Vertex base, int dx, int dy, int dz) {
+        return new VertexLiteral(base.x() + dx, base.y() + dy, base.z() + dz);
     }
 }

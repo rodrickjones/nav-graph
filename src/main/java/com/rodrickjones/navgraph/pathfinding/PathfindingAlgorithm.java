@@ -1,11 +1,13 @@
 package com.rodrickjones.navgraph.pathfinding;
 
-import com.rodrickjones.navgraph.Graph;
-import com.rodrickjones.navgraph.edges.Edge;
-import com.rodrickjones.navgraph.vertices.Vertex;
-import com.rodrickjones.navgraph.requirements.RequirementContext;
+import com.rodrickjones.navgraph.edge.Edge;
+import com.rodrickjones.navgraph.graph.Graph;
+import com.rodrickjones.navgraph.requirement.RequirementContext;
+import com.rodrickjones.navgraph.vertex.Vertex;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 
 public abstract class PathfindingAlgorithm<T extends Graph> {
     protected final T graph;
@@ -20,13 +22,13 @@ public abstract class PathfindingAlgorithm<T extends Graph> {
         ArrayList<Vertex> vertices = new ArrayList<>();
         ArrayList<Edge> edges = new ArrayList<>();
 
-        while (current.getParent() != null) {
-            vertices.add(current.getVertex());
-            Edge edge = current.getEdge();
+        while (current.parent() != null) {
+            vertices.add(current.vertex());
+            Edge edge = current.edge();
             edges.add(edge);
-            current = current.getParent();
+            current = current.parent();
         }
-        vertices.add(current.getVertex());
+        vertices.add(current.vertex());
 
         vertices.trimToSize();
         edges.trimToSize();
@@ -36,58 +38,4 @@ public abstract class PathfindingAlgorithm<T extends Graph> {
         return new Path(vertices, edges);
     }
 
-    static class Node {
-        private final Vertex vertex;
-        private final double heuristic;
-        private Edge edge;
-        private Node parent;
-        private double cost;
-
-        Node(Vertex vertex, Node parent, Edge edge, double cost, double heuristic) {
-            this.vertex = vertex;
-            this.parent = parent;
-            this.edge = edge;
-            this.cost = cost;
-            this.heuristic = heuristic;
-        }
-
-        public Vertex getVertex() {
-            return vertex;
-        }
-
-        public Edge getEdge() {
-            return edge;
-        }
-
-        public Node getParent() {
-            return parent;
-        }
-
-        public void setParent(Node parent, Edge edge) {
-            this.parent = parent;
-            this.edge = edge;
-            this.cost = parent.getCost() + edge.getCost();
-        }
-
-        public double getCost() {
-            return cost;
-        }
-
-        public double getHeuristic() {
-            return heuristic;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            Node node = (Node) o;
-            return Objects.equals(vertex, node.vertex);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(vertex);
-        }
-    }
 }

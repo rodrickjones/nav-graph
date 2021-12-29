@@ -1,15 +1,19 @@
 package com.rodrickjones.navgraph.pathfinding;
 
-import com.rodrickjones.navgraph.edges.Edge;
-import com.rodrickjones.navgraph.edges.EdgeReader;
-import com.rodrickjones.navgraph.requirements.RequirementReader;
-import com.rodrickjones.navgraph.vertices.Vertex;
+import com.rodrickjones.navgraph.edge.Edge;
+import com.rodrickjones.navgraph.edge.EdgeLiteral;
+import com.rodrickjones.navgraph.edge.EdgeReader;
+import com.rodrickjones.navgraph.requirement.RequirementReader;
+import com.rodrickjones.navgraph.vertex.Vertex;
+import com.rodrickjones.navgraph.vertex.VertexLiteral;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
+// TODO make package-private or extract interface
 public class Path {
     private final List<Vertex> vertices;
     private final List<Edge> edges;
@@ -18,7 +22,7 @@ public class Path {
     public Path(List<Vertex> vertices, List<Edge> edges) {
         this.vertices = vertices;
         this.edges = edges;
-        cost = edges.stream().mapToDouble(Edge::getCost).sum();
+        cost = edges.stream().mapToDouble(Edge::cost).sum();
     }
 
     public List<Vertex> getVertices() {
@@ -39,7 +43,7 @@ public class Path {
         int vertexCount = in.readInt();
         List<Vertex> vertices = new ArrayList<>(vertexCount);
         for (int i = 0; i < vertexCount; i++) {
-            vertices.add(Vertex.readFromDataStream(in));
+            vertices.add(VertexLiteral.readFromDataStream(in));
         }
 
         int edgeCount = in.readInt();
@@ -55,11 +59,13 @@ public class Path {
     public void writeToDataStream(DataOutputStream out) throws IOException {
         out.writeInt(vertices.size());
         for (Vertex v : vertices) {
-            v.writeToDataStream(out);
+            // FIXME
+            ((VertexLiteral) v).writeToDataStream(out);
         }
         out.writeInt(edges.size());
         for (Edge e : edges) {
-            e.writeToDataStream(out);
+            // FIXME
+            ((EdgeLiteral) e).writeToDataStream(out);
         }
     }
 

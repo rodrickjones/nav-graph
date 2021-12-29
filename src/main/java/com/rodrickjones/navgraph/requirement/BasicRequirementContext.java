@@ -1,11 +1,14 @@
-package com.rodrickjones.navgraph.requirements;
+package com.rodrickjones.navgraph.requirement;
 
-import java.io.*;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 
 public class BasicRequirementContext implements RequirementContext {
-    private Map<String, Object> map = new HashMap<>();
+    private Map<String, Object> map;
 
     public BasicRequirementContext(InputStream in) throws IOException {
         try (DataInputStream dis = new DataInputStream(in)) {

@@ -1,7 +1,7 @@
 package com.rodrickjones.navgraph.pathfinding;
 
-import com.rodrickjones.navgraph.Graph;
-import com.rodrickjones.navgraph.vertices.Vertex;
+import com.rodrickjones.navgraph.graph.Graph;
+import com.rodrickjones.navgraph.vertex.Vertex;
 
 import java.util.Collection;
 

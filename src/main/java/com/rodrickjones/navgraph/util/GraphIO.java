@@ -1,16 +1,18 @@
 package com.rodrickjones.navgraph.util;
 
-import com.rodrickjones.navgraph.edges.Edge;
-import com.rodrickjones.navgraph.Graph;
-import com.rodrickjones.navgraph.SimpleGraph;
-import com.rodrickjones.navgraph.edges.EdgeReader;
-import com.rodrickjones.navgraph.requirements.RequirementReader;
-import com.rodrickjones.navgraph.vertices.Vertex;
+import com.rodrickjones.navgraph.edge.Edge;
+import com.rodrickjones.navgraph.edge.EdgeLiteral;
+import com.rodrickjones.navgraph.edge.EdgeReader;
+import com.rodrickjones.navgraph.graph.SimpleGraph;
+import com.rodrickjones.navgraph.requirement.RequirementReader;
+import com.rodrickjones.navgraph.vertex.Vertex;
+import com.rodrickjones.navgraph.vertex.VertexLiteral;
 
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Iterator;
 import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -20,7 +22,7 @@ public class GraphIO {
     //    public final static String VERSION = "1.0.0";
     public final static Charset CHARSET = StandardCharsets.US_ASCII;
 
-    public static <T extends Graph> T readFromZip(File zipFile, Class<T> tClass,
+    public static <T extends SimpleGraph> T readFromZip(File zipFile, Class<T> tClass,
                                                   EdgeReader edgeReader,
                                                   RequirementReader requirementReader) {
         try (ZipInputStream zipIn = new ZipInputStream(new FileInputStream(zipFile), CHARSET);
@@ -38,7 +40,7 @@ public class GraphIO {
                     case "vertices":
                         int vertexCount = dataIn.readInt();
                         for (int i = 0; i < vertexCount; i++) {
-                            graph.addVertex(Vertex.readFromDataStream(dataIn));
+                            graph.addVertex(VertexLiteral.readFromDataStream(dataIn));
                         }
                         break;
                     case "edges":
@@ -68,21 +70,27 @@ public class GraphIO {
 //            dataOut.writeUTF(VERSION);
 
             ZipEntry verticesEntry = new ZipEntry("vertices");
-            int vertexCount = graph.getVertexCount();
+            int vertexCount = graph.vertexCount();
             verticesEntry.setComment(String.valueOf(vertexCount));
             zipOut.putNextEntry(verticesEntry);
             dos.writeInt(vertexCount);
-            for (Vertex vertex : graph.getVertices()) {
-                vertex.writeToDataStream(dos);
+            Iterator<Vertex> vertexIterator = graph.vertices().iterator();
+            while (vertexIterator.hasNext()) {
+                Vertex vertex = vertexIterator.next();
+                // FIXME
+                ((VertexLiteral) vertex).writeToDataStream(dos);
             }
 
             ZipEntry edgesEntry = new ZipEntry("edges");
-            int edgeCount = graph.getEdgeCount();
+            int edgeCount = graph.edgeCount();
             edgesEntry.setComment(String.valueOf(edgeCount));
             zipOut.putNextEntry(edgesEntry);
             dos.writeInt(edgeCount);
-            for (Edge edge : graph.getEdges()) {
-                edge.writeToDataStream(dos);
+            Iterator<Edge> edgeIterator = graph.edges().iterator();
+            while (edgeIterator.hasNext()) {
+                Edge edge = edgeIterator.next();
+                // FIXME
+                ((EdgeLiteral) edge).writeToDataStream(dos);
             }
 
             zipOut.finish();

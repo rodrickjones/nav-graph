@@ -1,10 +1,10 @@
 package com.rodrickjones.navgraph.util;
 
-import com.rodrickjones.navgraph.Graph;
-import com.rodrickjones.navgraph.edges.Edge;
-import com.rodrickjones.navgraph.vertices.Vertex;
-import com.rodrickjones.navgraph.edges.BasicEdge;
+import com.rodrickjones.navgraph.edge.BasicEdge;
+import com.rodrickjones.navgraph.edge.Edge;
+import com.rodrickjones.navgraph.graph.Graph;
 import com.rodrickjones.navgraph.pathfinding.Path;
+import com.rodrickjones.navgraph.vertex.Vertex;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -12,9 +12,10 @@ import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class GraphRenderer {
 
@@ -23,9 +24,11 @@ public class GraphRenderer {
         int minY = Integer.MAX_VALUE;
         int maxX = 0;
         int maxY = 0;
-        for (Vertex vertex : graph.getVertices()) {
-            int x = vertex.getX();
-            int y = vertex.getY();
+        Iterator<Vertex> vertexIterator = graph.vertices().iterator();
+        while (vertexIterator.hasNext()) {
+            Vertex vertex = vertexIterator.next();
+            int x = vertex.x();
+            int y = vertex.y();
             if (x < minX) {
                 minX = x;
             }
@@ -56,22 +59,24 @@ public class GraphRenderer {
         Color vertexFill = Color.LIGHT_GRAY;
 //        Color vertexBorder = Color.GRAY;
         Color wall = Color.BLACK;
-        for (Vertex vertex : graph.getVertices()) {
-            if (vertex.getZ() != plane) {
+        vertexIterator = graph.vertices().iterator();
+        while (vertexIterator.hasNext()) {
+            Vertex vertex = vertexIterator.next();
+            if (vertex.z() != plane) {
                 continue;
             }
-            Collection<Edge> edges = graph.getEdges(vertex);
-            int x = vertex.getX() - minX;
-            int y = vertex.getY() - minY;
+            Stream<Edge> edges = graph.edges(vertex);
+            int x = vertex.x() - minX;
+            int y = vertex.y() - minY;
 
             graphics.setPaint(vertexFill);
             graphics.fillRect(x * vertexSize, y * vertexSize, vertexSize, vertexSize);
 //            graphics.setPaint(vertexBorder);
 //            graphics.drawRect(x * vertexSize, y * vertexSize, vertexSize, vertexSize);
             graphics.setPaint(wall);
-            Set<String> diff = edges == null ? Collections.emptySet() : edges.stream().filter(e -> e.getType() == BasicEdge.TYPE)
-                    .map(Edge::getDestination)
-                    .map(d -> (d.getX() - vertex.getX()) + ", " + (d.getY() - vertex.getY()))
+            Set<String> diff = edges.filter(e -> e.getType() == BasicEdge.TYPE)
+                    .map(Edge::destination)
+                    .map(d -> (d.x() - vertex.x()) + ", " + (d.y() - vertex.y()))
                     .collect(Collectors.toSet());
             //no neighbour north
             if (!diff.contains("0, 1")) {
@@ -98,48 +103,50 @@ public class GraphRenderer {
         int offset = (int) ((vertexSize + 0.5d) / 2);
         List<Edge> nonBasicEdges = new ArrayList<>(10000);
         graphics.setPaint(Color.GREEN);
-        for (Vertex vertex : graph.getVertices()) {
-            if (vertex.getZ() != plane) {
+        vertexIterator = graph.vertices().iterator();
+        while (vertexIterator.hasNext()) {
+            Vertex vertex = vertexIterator.next();
+            if (vertex.z() != plane) {
                 continue;
             }
-            Collection<Edge> edges = graph.getEdges(vertex);
-            if (edges == null) {
-                continue;
-            }
-            int x = vertex.getX() - minX;
-            int y = vertex.getY() - minY;
-            for (Edge edge : edges) {
+            int x = vertex.x() - minX;
+            int y = vertex.y() - minY;
+            Stream<Edge> edges = graph.edges(vertex);
+            assert Objects.nonNull(edges);
+            Iterator<Edge> edgeIterator = edges.iterator();
+            while (edgeIterator.hasNext()) {
+                Edge edge = edgeIterator.next();
                 if (edge.getType() != BasicEdge.TYPE) {
                     nonBasicEdges.add(edge);
                     continue;
                 }
-                Vertex destination = edge.getDestination();
+                Vertex destination = edge.destination();
                 graphics.drawLine(x * vertexSize + offset, y * vertexSize + offset,
-                        (destination.getX() - minX) * vertexSize + offset, (destination.getY() - minY) * vertexSize + offset);
+                        (destination.x() - minX) * vertexSize + offset, (destination.y() - minY) * vertexSize + offset);
             }
         }
         Stroke oldStroke = graphics.getStroke();
         graphics.setPaint(Color.BLUE);
         graphics.setStroke(new BasicStroke(1, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[]{vertexSize}, 0));
         for (Edge edge : nonBasicEdges) {
-            Vertex origin = edge.getOrigin();
-            Vertex destination = edge.getDestination();
-            graphics.drawLine((origin.getX() - minX) * vertexSize + offset, (origin.getY() - minY) * vertexSize + offset,
-                    (destination.getX() - minX) * vertexSize + offset, (destination.getY() - minY) * vertexSize + offset);
+            Vertex origin = edge.origin();
+            Vertex destination = edge.destination();
+            graphics.drawLine((origin.x() - minX) * vertexSize + offset, (origin.y() - minY) * vertexSize + offset,
+                    (destination.x() - minX) * vertexSize + offset, (destination.y() - minY) * vertexSize + offset);
         }
         graphics.setStroke(oldStroke);
 
         for (Path p : paths) {
             for (Edge edge : p.getEdges()) {
-                Vertex origin = edge.getOrigin();
-                Vertex destination = edge.getDestination();
+                Vertex origin = edge.origin();
+                Vertex destination = edge.destination();
                 if (edge.getType() == 0) {
                     graphics.setPaint(Color.YELLOW);
                 } else {
                     graphics.setPaint(Color.RED);
                 }
-                graphics.drawLine((origin.getX() - minX) * vertexSize + offset, (origin.getY() - minY) * vertexSize + offset,
-                        (destination.getX() - minX) * vertexSize + offset, (destination.getY() - minY) * vertexSize + offset);
+                graphics.drawLine((origin.x() - minX) * vertexSize + offset, (origin.y() - minY) * vertexSize + offset,
+                        (destination.x() - minX) * vertexSize + offset, (destination.y() - minY) * vertexSize + offset);
             }
         }
 

@@ -1,6 +1,6 @@
-package com.rodrickjones.navgraph.edges;
+package com.rodrickjones.navgraph.edge;
 
-import com.rodrickjones.navgraph.requirements.RequirementReader;
+import com.rodrickjones.navgraph.requirement.RequirementReader;
 
 import java.io.DataInputStream;
 import java.io.IOException;

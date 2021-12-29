@@ -1,19 +1,21 @@
 package com.rodrickjones.navgraph.pathfinding;
 
-import com.rodrickjones.navgraph.Graph;
-import com.rodrickjones.navgraph.HierarchicalGraph;
-import com.rodrickjones.navgraph.SimpleGraph;
-import com.rodrickjones.navgraph.requirements.RequirementContext;
+import com.rodrickjones.navgraph.graph.Graph;
+import com.rodrickjones.navgraph.graph.SimpleGraph;
+import com.rodrickjones.navgraph.graph.hierarchical.SimpleHierarchicalGraph;
+import com.rodrickjones.navgraph.graph.hierarchical.SubRegion;
+import com.rodrickjones.navgraph.graph.hierarchical.SubRegionEdge;
+import com.rodrickjones.navgraph.requirement.RequirementContext;
 import com.rodrickjones.navgraph.util.Frontier;
-import com.rodrickjones.navgraph.vertices.Vertex;
+import com.rodrickjones.navgraph.vertex.Vertex;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
-public class Hierarchical extends PathfindingAlgorithm<HierarchicalGraph> {
-    public Hierarchical(HierarchicalGraph graph) {
+public class Hierarchical extends PathfindingAlgorithm<SimpleHierarchicalGraph> {
+    public Hierarchical(SimpleHierarchicalGraph graph) {
         super(graph);
     }
 
@@ -21,8 +23,8 @@ public class Hierarchical extends PathfindingAlgorithm<HierarchicalGraph> {
     public Path findPath(Vertex origin, Collection<Vertex> destinations, RequirementContext context) {
         long start = System.currentTimeMillis();
         //find path of sections
-        HierarchicalGraph.SubRegion originSubRegion = graph.getSubRegion(origin);
-        Collection<HierarchicalGraph.SubRegion> destinationSubRegions = destinations.stream().map(graph::getSubRegion)
+        SubRegion originSubRegion = graph.subRegion(origin);
+        Collection<SubRegion> destinationSubRegions = destinations.stream().map(graph::subRegion)
                 .filter(Objects::nonNull).collect(Collectors.toList());
         if (originSubRegion == null || destinationSubRegions.isEmpty()) {
             log.warn("Unable to find origin and destination sub regions: origin={}, origin SubRegion={}, destination={}, destination SubRegion={}", origin, originSubRegion, destinations, destinationSubRegions);
@@ -31,7 +33,7 @@ public class Hierarchical extends PathfindingAlgorithm<HierarchicalGraph> {
         }
         Queue<SubRegionNode> frontier = new Frontier<>(Comparator.comparingDouble(SubRegionNode::getCost));
         frontier.add(new SubRegionNode(originSubRegion, null, 0));
-        Map<HierarchicalGraph.SubRegion, SubRegionNode> explored = new HashMap<>();
+        Map<SubRegion, SubRegionNode> explored = new HashMap<>();
         SimpleGraph leanGraph = null;
         while (!frontier.isEmpty()) {
             SubRegionNode current = frontier.poll();
@@ -44,23 +46,22 @@ public class Hierarchical extends PathfindingAlgorithm<HierarchicalGraph> {
                 break;
             }
             explored.put(current.getSubRegion(), current);
-            Collection<HierarchicalGraph.SubRegionEdge> subRegionEdges = graph.getEdges(current.getSubRegion());
-            if (subRegionEdges != null) {
-                for (HierarchicalGraph.SubRegionEdge edge : subRegionEdges) {
-                    if (!edge.canTraverse(context)) {
-                        continue;
-                    }
+            Iterator<SubRegionEdge> subRegionEdgeIterator = graph.edges(current.getSubRegion()).iterator();
+            while (subRegionEdgeIterator.hasNext()) {
+                SubRegionEdge subRegionEdge = subRegionEdgeIterator.next();
+                if (!subRegionEdge.canTraverse(context)) {
+                    continue;
+                }
 
-                    SubRegionNode node = explored.get(edge.getDestination());
-                    double cost = current.getCost() + edge.getCost();
-                    if (node == null) {
-                        node = new SubRegionNode(edge.getDestination(), current, cost);
-                        if (!frontier.contains(node)) {
-                            frontier.add(node);
-                        }
-                    } else if (cost < node.getCost()) {
-                        node.setParent(current, edge);
+                SubRegionNode node = explored.get(subRegionEdge.destination());
+                double cost = current.getCost() + subRegionEdge.cost();
+                if (node == null) {
+                    node = new SubRegionNode(subRegionEdge.destination(), current, cost);
+                    if (!frontier.contains(node)) {
+                        frontier.add(node);
                     }
+                } else if (cost < node.getCost()) {
+                    node.setParent(current, subRegionEdge);
                 }
             }
         }
@@ -82,25 +83,25 @@ public class Hierarchical extends PathfindingAlgorithm<HierarchicalGraph> {
         }
     }
 
-    private void addToGraph(Graph leanGraph, HierarchicalGraph.SubRegion subRegion) {
-        for (Vertex v : subRegion.getVertices()) {
-            leanGraph.addVertex(v);
-            leanGraph.addEdges(graph.getEdges(v));
-        }
+    private void addToGraph(SimpleGraph leanGraph, SubRegion subRegion) {
+        subRegion.vertices().forEachOrdered(vertex -> {
+            leanGraph.addVertex(vertex);
+            leanGraph.addEdges(graph.edges(vertex));
+        });
     }
 
     public static class SubRegionNode {
-        final HierarchicalGraph.SubRegion subRegion;
+        final SubRegion subRegion;
         SubRegionNode parent;
         double cost;
 
-        SubRegionNode(HierarchicalGraph.SubRegion subRegion, SubRegionNode parent, double cost) {
+        SubRegionNode(SubRegion subRegion, SubRegionNode parent, double cost) {
             this.subRegion = subRegion;
             this.parent = parent;
             this.cost = cost;
         }
 
-        public HierarchicalGraph.SubRegion getSubRegion() {
+        public SubRegion getSubRegion() {
             return subRegion;
         }
 
@@ -108,9 +109,9 @@ public class Hierarchical extends PathfindingAlgorithm<HierarchicalGraph> {
             return parent;
         }
 
-        public void setParent(SubRegionNode parent, HierarchicalGraph.SubRegionEdge edge) {
+        public void setParent(SubRegionNode parent, SubRegionEdge edge) {
             this.parent = parent;
-            this.cost = parent.getCost() + edge.getCost();
+            this.cost = parent.getCost() + edge.cost();
         }
 
         public double getCost() {
