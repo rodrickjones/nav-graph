@@ -1,7 +1,9 @@
 package com.rodrickjones.navgraph.graph.hierarchical;
 
+import com.rodrickjones.navgraph.graph.Graph;
 import com.rodrickjones.navgraph.vertex.Vertex;
 import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.stream.Stream;
@@ -12,11 +14,11 @@ public interface Region {
 
     int baseY();
 
-    Stream<SubRegion> subRegions();
+    @NotNull Stream<Graph> subGraphs();
 
-    @Nullable SubRegion subRegion(@NonNull Vertex vertex);
+    @Nullable Graph subGraph(@NonNull Vertex vertex);
 
-    int subRegionCount();
+    int subGraphCount();
 
     boolean contains(@NonNull Vertex vertex);
 }

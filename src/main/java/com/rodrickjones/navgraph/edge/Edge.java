@@ -1,17 +1,17 @@
 package com.rodrickjones.navgraph.edge;
 
 import com.rodrickjones.navgraph.requirement.Requirement;
-import com.rodrickjones.navgraph.vertex.Vertex;
+import org.jetbrains.annotations.NotNull;
 
-public interface Edge {
-    Vertex origin();
+public interface Edge<V> {
+    @NotNull V origin();
 
-    Vertex destination();
+    @NotNull V destination();
 
     float cost();
 
-    Requirement requirement();
+    @NotNull Requirement requirement();
 
     // TODO replace polymorphism with labels
-    int getType();
+    int type();
 }

@@ -1,7 +1,7 @@
 package com.rodrickjones.navgraph.util;
 
-import com.rodrickjones.navgraph.edge.BasicEdge;
 import com.rodrickjones.navgraph.edge.Edge;
+import com.rodrickjones.navgraph.edge.EdgeLiteral;
 import com.rodrickjones.navgraph.graph.Graph;
 import com.rodrickjones.navgraph.pathfinding.Path;
 import com.rodrickjones.navgraph.vertex.Vertex;
@@ -65,7 +65,7 @@ public class GraphRenderer {
             if (vertex.z() != plane) {
                 continue;
             }
-            Stream<Edge> edges = graph.edges(vertex);
+            Stream<Edge<Vertex>> edges = graph.edges(vertex);
             int x = vertex.x() - minX;
             int y = vertex.y() - minY;
 
@@ -74,7 +74,7 @@ public class GraphRenderer {
 //            graphics.setPaint(vertexBorder);
 //            graphics.drawRect(x * vertexSize, y * vertexSize, vertexSize, vertexSize);
             graphics.setPaint(wall);
-            Set<String> diff = edges.filter(e -> e.getType() == BasicEdge.TYPE)
+            Set<String> diff = edges.filter(e -> e.type() == EdgeLiteral.TYPE)
                     .map(Edge::destination)
                     .map(d -> (d.x() - vertex.x()) + ", " + (d.y() - vertex.y()))
                     .collect(Collectors.toSet());
@@ -101,7 +101,7 @@ public class GraphRenderer {
         }
 
         int offset = (int) ((vertexSize + 0.5d) / 2);
-        List<Edge> nonBasicEdges = new ArrayList<>(10000);
+        List<Edge<Vertex>> nonBasicEdges = new ArrayList<>(10000);
         graphics.setPaint(Color.GREEN);
         vertexIterator = graph.vertices().iterator();
         while (vertexIterator.hasNext()) {
@@ -111,12 +111,12 @@ public class GraphRenderer {
             }
             int x = vertex.x() - minX;
             int y = vertex.y() - minY;
-            Stream<Edge> edges = graph.edges(vertex);
+            Stream<Edge<Vertex>> edges = graph.edges(vertex);
             assert Objects.nonNull(edges);
-            Iterator<Edge> edgeIterator = edges.iterator();
+            Iterator<Edge<Vertex>> edgeIterator = edges.iterator();
             while (edgeIterator.hasNext()) {
-                Edge edge = edgeIterator.next();
-                if (edge.getType() != BasicEdge.TYPE) {
+                Edge<Vertex> edge = edgeIterator.next();
+                if (edge.type() != EdgeLiteral.TYPE) {
                     nonBasicEdges.add(edge);
                     continue;
                 }
@@ -128,7 +128,7 @@ public class GraphRenderer {
         Stroke oldStroke = graphics.getStroke();
         graphics.setPaint(Color.BLUE);
         graphics.setStroke(new BasicStroke(1, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[]{vertexSize}, 0));
-        for (Edge edge : nonBasicEdges) {
+        for (Edge<Vertex> edge : nonBasicEdges) {
             Vertex origin = edge.origin();
             Vertex destination = edge.destination();
             graphics.drawLine((origin.x() - minX) * vertexSize + offset, (origin.y() - minY) * vertexSize + offset,
@@ -137,10 +137,10 @@ public class GraphRenderer {
         graphics.setStroke(oldStroke);
 
         for (Path p : paths) {
-            for (Edge edge : p.getEdges()) {
+            for (Edge<Vertex> edge : p.getEdges()) {
                 Vertex origin = edge.origin();
                 Vertex destination = edge.destination();
-                if (edge.getType() == 0) {
+                if (edge.type() == 0) {
                     graphics.setPaint(Color.YELLOW);
                 } else {
                     graphics.setPaint(Color.RED);

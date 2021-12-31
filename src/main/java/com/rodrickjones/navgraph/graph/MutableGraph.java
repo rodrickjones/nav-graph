@@ -11,7 +11,7 @@ public interface MutableGraph extends Graph {
 
     void addVertex(@NonNull Vertex vertex);
 
-    void addEdges(@NonNull Stream<Edge> edges);
+    void addEdges(@NonNull Stream<Edge<Vertex>> edges);
 
-    void addEdge(@NonNull Edge edge);
+    void addEdge(@NonNull Edge<Vertex> edge);
 }

@@ -20,11 +20,11 @@ public abstract class PathfindingAlgorithm<T extends Graph> {
 
     protected Path backtrackAndBuildPath(Node current) {
         ArrayList<Vertex> vertices = new ArrayList<>();
-        ArrayList<Edge> edges = new ArrayList<>();
+        ArrayList<Edge<Vertex>> edges = new ArrayList<>();
 
         while (current.parent() != null) {
             vertices.add(current.vertex());
-            Edge edge = current.edge();
+            Edge<Vertex> edge = current.edge();
             edges.add(edge);
             current = current.parent();
         }

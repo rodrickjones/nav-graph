@@ -1,11 +1,15 @@
 package com.rodrickjones.navgraph.graph.hierarchical;
 
 import com.rodrickjones.navgraph.edge.Edge;
+import com.rodrickjones.navgraph.edge.EdgeLiteral;
+import com.rodrickjones.navgraph.graph.Graph;
 import com.rodrickjones.navgraph.graph.SimpleGraph;
+import com.rodrickjones.navgraph.requirement.Requirements;
 import com.rodrickjones.navgraph.util.Frontier;
 import com.rodrickjones.navgraph.vertex.Vertex;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.text.DecimalFormat;
@@ -20,7 +24,7 @@ public class SimpleHierarchicalGraph extends SimpleGraph implements Hierarchical
     private static final DecimalFormat twoDif = new DecimalFormat("00");
 
     private final Map<Long, SimpleRegion> regions;
-    private final Map<SubRegion, Collection<SubRegionEdge>> sectionEdges = new HashMap<>();
+    private final Map<Graph, Collection<Edge<Graph>>> sectionEdges = new HashMap<>();
 
     public SimpleHierarchicalGraph() {
         super();
@@ -32,7 +36,7 @@ public class SimpleHierarchicalGraph extends SimpleGraph implements Hierarchical
         regions = initRegions(initialVertexCapacity);
     }
 
-    public SimpleHierarchicalGraph(Collection<Vertex> vertices, Collection<Edge> edges) {
+    public SimpleHierarchicalGraph(Collection<Vertex> vertices, Collection<Edge<Vertex>> edges) {
         super(vertices, edges);
         regions = initRegions(vertices.size());
     }
@@ -60,24 +64,25 @@ public class SimpleHierarchicalGraph extends SimpleGraph implements Hierarchical
 
     public void compile() {
         Set<Vertex> visited = new HashSet<>(vertexCount());
-        log.info("Compiling regions and sections");
+        log.info("Compiling regions and subgraphs");
         long start = System.currentTimeMillis();
         Iterator<Vertex> vertexIterator = vertices().iterator();
         while (vertexIterator.hasNext()) {
             Vertex vertex = vertexIterator.next();
             if (!visited.contains(vertex)) {
                 SimpleRegion region = regions.computeIfAbsent(regionId(vertex), SimpleRegion::new);
-                SimpleSubRegion subRegion = new SimpleSubRegion(region.id() + "_" + region.subRegions.size());
-                region.addSubRegion(subRegion);
+                int maxVertices = SimpleRegion.WIDTH * SimpleRegion.HEIGHT;
+                SimpleGraph subGraph = new SimpleGraph(maxVertices, maxVertices * 4);
+                region.addSubGraph(subGraph);
                 Queue<Vertex> frontier = new Frontier<>(Comparator.comparingInt(Vertex::y));
                 frontier.add(vertex);
                 while (!frontier.isEmpty()) {
                     Vertex current = frontier.poll();
-                    subRegion.addVertex(vertex);
-                    Iterator<Edge> edgeIterator = edges(current).iterator();
+                    subGraph.addVertex(vertex);
+                    Iterator<Edge<Vertex>> edgeIterator = edges(current).iterator();
                     while (edgeIterator.hasNext()) {
-                        Edge edge = edgeIterator.next();
-                        if (edge.requirement() != null) {
+                        Edge<Vertex> edge = edgeIterator.next();
+                        if (!edge.requirement().equals(Requirements.none())) {
                             //Skip all requirements when pathing through the high level overview
                             continue;
                         }
@@ -85,32 +90,32 @@ public class SimpleHierarchicalGraph extends SimpleGraph implements Hierarchical
                         if (!visited.contains(dest) && !frontier.contains(dest)
                                 && dest.x() >= region.baseX() && dest.y() >= region.baseY()
                                 && dest.x() < region.baseX() + SimpleRegion.WIDTH && dest.y() < region.baseY() + SimpleRegion.HEIGHT
-                                && !subRegion.contains(dest)) {
+                                && !subGraph.containsVertex(dest)) {
                             frontier.add(dest);
-                            subRegion.addVertex(dest);
+                            subGraph.addVertex(dest);
                         }
                     }
                 }
-                subRegion.vertices().forEach(visited::add);
+                subGraph.vertices().forEach(visited::add);
             }
         }
         log.info("Time taken: " + formatTime(System.currentTimeMillis() - start));
         log.info("Linking sections");
         start = System.currentTimeMillis();
-        Iterator<SubRegion> subRegionIterator = regions.values().stream().flatMap(Region::subRegions).iterator();
-        while (subRegionIterator.hasNext()) {
-            SubRegion subRegion = subRegionIterator.next();
-            Collection<SubRegionEdge> subRegionEdges = this.sectionEdges.computeIfAbsent(subRegion, k -> new ArrayList<>());
-            Iterator<Edge> edgeIterator = subRegion.vertices().flatMap(this::edges).iterator();
+        Iterator<Graph> subGraphIterator = regions.values().stream().flatMap(Region::subGraphs).iterator();
+        while (subGraphIterator.hasNext()) {
+            Graph subGraph = subGraphIterator.next();
+            Collection<Edge<Graph>> subGraphEdges = this.sectionEdges.computeIfAbsent(subGraph, k -> new ArrayList<>());
+            Iterator<Edge<Vertex>> edgeIterator = subGraph.vertices().flatMap(this::edges).iterator();
             while (edgeIterator.hasNext()) {
-                Edge edge = edgeIterator.next();
-                if (!subRegion.contains(edge.destination())) {
-                    subRegionEdges.add(new SimpleSubRegionEdge(subRegion, subRegion(edge.destination()),
-                            Math.sqrt(subRegion.vertexCount()), edge.requirement()));
+                Edge<Vertex> edge = edgeIterator.next();
+                if (!subGraph.containsVertex(edge.destination())) {
+                    subGraphEdges.add(new EdgeLiteral<>(subGraph, Objects.requireNonNull(subGraph(edge.destination())),
+                            (float) Math.sqrt(subGraph.vertexCount()), edge.requirement()));
                 }
             }
-            if (subRegionEdges instanceof ArrayList<?>) {
-                ((ArrayList<SubRegionEdge>) subRegionEdges).trimToSize();
+            if (subGraphEdges instanceof ArrayList<?>) {
+                ((ArrayList<Edge<Graph>>) subGraphEdges).trimToSize();
             }
         }
         log.info("Time taken: " + formatTime(System.currentTimeMillis() - start));
@@ -122,13 +127,13 @@ public class SimpleHierarchicalGraph extends SimpleGraph implements Hierarchical
     }
 
     @Override
-    public @Nullable SubRegion subRegion(@NonNull Vertex vertex) {
-        return regions.get(regionId(vertex)).subRegion(vertex);
+    public @Nullable Graph subGraph(@NonNull Vertex vertex) {
+        return regions.get(regionId(vertex)).subGraph(vertex);
     }
 
     @Override
-    public Stream<SubRegionEdge> edges(@NonNull SubRegion subRegion) {
-        Collection<SubRegionEdge> value = sectionEdges.get(subRegion);
+    public @NotNull Stream<Edge<Graph>> edges(@NonNull Graph subGraph) {
+        Collection<Edge<Graph>> value = sectionEdges.get(subGraph);
         if (value == null) {
             return Stream.empty();
         }
@@ -141,7 +146,7 @@ public class SimpleHierarchicalGraph extends SimpleGraph implements Hierarchical
                 "vertices=" + vertexCount() +
                 ", edges=" + edgeCount() +
                 ", regions=" + regions.size() +
-                ", subRegions=" + regions.values().stream().mapToInt(Region::subRegionCount).sum() +
+                ", subGraphs=" + regions.values().stream().mapToInt(Region::subGraphCount).sum() +
                 ", sectionEdges=" + sectionEdges.values().stream().mapToInt(Collection::size).sum() +
                 '}';
     }

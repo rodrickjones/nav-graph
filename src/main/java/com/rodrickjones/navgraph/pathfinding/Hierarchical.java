@@ -1,10 +1,9 @@
 package com.rodrickjones.navgraph.pathfinding;
 
+import com.rodrickjones.navgraph.edge.Edge;
 import com.rodrickjones.navgraph.graph.Graph;
 import com.rodrickjones.navgraph.graph.SimpleGraph;
 import com.rodrickjones.navgraph.graph.hierarchical.SimpleHierarchicalGraph;
-import com.rodrickjones.navgraph.graph.hierarchical.SubRegion;
-import com.rodrickjones.navgraph.graph.hierarchical.SubRegionEdge;
 import com.rodrickjones.navgraph.requirement.RequirementContext;
 import com.rodrickjones.navgraph.util.Frontier;
 import com.rodrickjones.navgraph.vertex.Vertex;
@@ -23,45 +22,45 @@ public class Hierarchical extends PathfindingAlgorithm<SimpleHierarchicalGraph> 
     public Path findPath(Vertex origin, Collection<Vertex> destinations, RequirementContext context) {
         long start = System.currentTimeMillis();
         //find path of sections
-        SubRegion originSubRegion = graph.subRegion(origin);
-        Collection<SubRegion> destinationSubRegions = destinations.stream().map(graph::subRegion)
+        Graph originSubGraph = graph.subGraph(origin);
+        Collection<Graph> destinationSubGraphs = destinations.stream().map(graph::subGraph)
                 .filter(Objects::nonNull).collect(Collectors.toList());
-        if (originSubRegion == null || destinationSubRegions.isEmpty()) {
-            log.warn("Unable to find origin and destination sub regions: origin={}, origin SubRegion={}, destination={}, destination SubRegion={}", origin, originSubRegion, destinations, destinationSubRegions);
+        if (originSubGraph == null || destinationSubGraphs.isEmpty()) {
+            log.warn("Unable to find origin and destination sub regions: origin={}, originSubGraph={}, destination={}, destinationSubGraph={}", origin, originSubGraph, destinations, destinationSubGraphs);
             log.trace("No path, unable to find both sub regions: {}ms", System.currentTimeMillis() - start);
             return null;
         }
-        Queue<SubRegionNode> frontier = new Frontier<>(Comparator.comparingDouble(SubRegionNode::getCost));
-        frontier.add(new SubRegionNode(originSubRegion, null, 0));
-        Map<SubRegion, SubRegionNode> explored = new HashMap<>();
+        Queue<SubGraphNode> frontier = new Frontier<>(Comparator.comparingDouble(SubGraphNode::cost));
+        frontier.add(new SubGraphNode(originSubGraph, null, 0));
+        Map<Graph, SubGraphNode> explored = new HashMap<>();
         SimpleGraph leanGraph = null;
         while (!frontier.isEmpty()) {
-            SubRegionNode current = frontier.poll();
-            if (destinationSubRegions.contains(current.getSubRegion())) {
+            SubGraphNode current = frontier.poll();
+            if (destinationSubGraphs.contains(current.getSubGraph())) {
                 leanGraph = new SimpleGraph();
-                addToGraph(leanGraph, current.getSubRegion());
+                addToGraph(leanGraph, current.getSubGraph());
                 while ((current = current.getParent()) != null) {
-                    addToGraph(leanGraph, current.getSubRegion());
+                    addToGraph(leanGraph, current.getSubGraph());
                 }
                 break;
             }
-            explored.put(current.getSubRegion(), current);
-            Iterator<SubRegionEdge> subRegionEdgeIterator = graph.edges(current.getSubRegion()).iterator();
-            while (subRegionEdgeIterator.hasNext()) {
-                SubRegionEdge subRegionEdge = subRegionEdgeIterator.next();
-                if (!subRegionEdge.canTraverse(context)) {
+            explored.put(current.getSubGraph(), current);
+            Iterator<Edge<Graph>> subGraphEdgeIterator = graph.edges(current.getSubGraph()).iterator();
+            while (subGraphEdgeIterator.hasNext()) {
+                Edge<Graph> subGraphEdge = subGraphEdgeIterator.next();
+                if (!subGraphEdge.requirement().satisfy(context)) {
                     continue;
                 }
 
-                SubRegionNode node = explored.get(subRegionEdge.destination());
-                double cost = current.getCost() + subRegionEdge.cost();
+                SubGraphNode node = explored.get(subGraphEdge.destination());
+                float cost = current.cost() + subGraphEdge.cost();
                 if (node == null) {
-                    node = new SubRegionNode(subRegionEdge.destination(), current, cost);
+                    node = new SubGraphNode(subGraphEdge.destination(), current, cost);
                     if (!frontier.contains(node)) {
                         frontier.add(node);
                     }
-                } else if (cost < node.getCost()) {
-                    node.setParent(current, subRegionEdge);
+                } else if (cost < node.cost()) {
+                    node.setParent(current, subGraphEdge);
                 }
             }
         }
@@ -72,64 +71,68 @@ public class Hierarchical extends PathfindingAlgorithm<SimpleHierarchicalGraph> 
             if (path != null) {
                 log.trace("Path created: {}ms", System.currentTimeMillis() - start);
             } else {
-                //We should never see this, unless the SubRegion linking has issues
+                //We should never see this, unless the SubGraph linking has issues
                 log.error("No path, unable to find path: {}ms", System.currentTimeMillis() - start);
             }
             return path;
         } else {
-            log.warn("Unable to find lean graph for subregions: origin={}, destinations={}", originSubRegion, destinationSubRegions);
+            log.warn("Unable to find lean graph for subGraph: origin={}, destinations={}", originSubGraph, destinationSubGraphs);
             log.trace("No path, unable to find lean graph: {}ms", System.currentTimeMillis() - start);
             return null;
         }
     }
 
-    private void addToGraph(SimpleGraph leanGraph, SubRegion subRegion) {
-        subRegion.vertices().forEachOrdered(vertex -> {
+    // TODO revisit
+    private void addToGraph(SimpleGraph leanGraph, Graph subGraph) {
+        subGraph.vertices().forEachOrdered(vertex -> {
             leanGraph.addVertex(vertex);
             leanGraph.addEdges(graph.edges(vertex));
         });
     }
 
-    public static class SubRegionNode {
-        final SubRegion subRegion;
-        SubRegionNode parent;
-        double cost;
+    static class SubGraphNode {
+        final Graph subGraph;
+        SubGraphNode parent;
+        float cost;
 
-        SubRegionNode(SubRegion subRegion, SubRegionNode parent, double cost) {
-            this.subRegion = subRegion;
+        SubGraphNode(Graph subGraph, SubGraphNode parent, float cost) {
+            this.subGraph = subGraph;
             this.parent = parent;
             this.cost = cost;
         }
 
-        public SubRegion getSubRegion() {
-            return subRegion;
+        public Graph getSubGraph() {
+            return subGraph;
         }
 
-        public SubRegionNode getParent() {
+        public SubGraphNode getParent() {
             return parent;
         }
 
-        public void setParent(SubRegionNode parent, SubRegionEdge edge) {
+        public void setParent(SubGraphNode parent, Edge<Graph> edge) {
             this.parent = parent;
-            this.cost = parent.getCost() + edge.cost();
+            this.cost = parent.cost() + edge.cost();
         }
 
-        public double getCost() {
+        public float cost() {
             return cost;
         }
 
         @Override
         public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            SubRegionNode node = (SubRegionNode) o;
-            return Objects.equals(subRegion, node.subRegion);
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            SubGraphNode node = (SubGraphNode) o;
+            return Objects.equals(subGraph, node.subGraph);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(subRegion);
+            return Objects.hash(subGraph);
         }
     }
-
 }

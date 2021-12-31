@@ -16,7 +16,7 @@ public class Requirements {
         @Override
         public int type() {
             // TODO revisit
-            return -1;
+            return Integer.MAX_VALUE;
         }
     };
 

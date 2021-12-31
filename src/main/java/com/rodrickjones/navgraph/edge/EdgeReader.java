@@ -1,6 +1,7 @@
 package com.rodrickjones.navgraph.edge;
 
 import com.rodrickjones.navgraph.requirement.RequirementReader;
+import com.rodrickjones.navgraph.vertex.Vertex;
 
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -18,7 +19,7 @@ public class EdgeReader {
     private final Map<Integer, EdgeParser> edgeParserMap = new HashMap<>();
 
     public EdgeReader() {
-        edgeParserMap.put(BasicEdge.TYPE, BasicEdge::new);
+        edgeParserMap.put(EdgeLiteral.TYPE, VertexEdgeLiteral::new);
     }
 
     public void registerParser(int type, EdgeParser edgeParser) {
@@ -34,11 +35,11 @@ public class EdgeReader {
         return edgeParserMap.get(type);
     }
 
-    public Edge readEdge(DataInputStream in, RequirementReader requirementReader) throws IOException {
+    public Edge<Vertex> readEdge(DataInputStream in, RequirementReader requirementReader) throws IOException {
         int type = in.readInt();
         EdgeParser reader = getParser(type);
         if (reader == null) {
-            throw new IllegalStateException("Unsupported Edge type: " + type);
+            throw new IllegalStateException("Unsupported edge type: " + type);
         }
         return reader.parseEdge(in, requirementReader);
     }

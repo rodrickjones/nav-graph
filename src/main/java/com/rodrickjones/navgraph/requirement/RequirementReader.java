@@ -16,6 +16,7 @@ public class RequirementReader {
     private final Map<Integer, RequirementParser> requirementParserMap = new HashMap<>();
 
     public RequirementReader() {
+        requirementParserMap.put(Integer.MAX_VALUE, in -> Requirements.none());
         requirementParserMap.put(OrRequirement.TYPE, in -> new OrRequirement(in, this));
         requirementParserMap.put(AndRequirement.TYPE, in -> new AndRequirement(in, this));
     }

@@ -8,11 +8,11 @@ import java.util.Objects;
 class Node {
     private final Vertex vertex;
     private final double heuristic;
-    private Edge edge;
+    private Edge<Vertex> edge;
     private Node parent;
-    private double cost;
+    private float cost;
 
-    Node(Vertex vertex, Node parent, Edge edge, double cost, double heuristic) {
+    Node(Vertex vertex, Node parent, Edge<Vertex> edge, float cost, double heuristic) {
         this.vertex = vertex;
         this.parent = parent;
         this.edge = edge;
@@ -24,7 +24,7 @@ class Node {
         return vertex;
     }
 
-    public Edge edge() {
+    public Edge<Vertex> edge() {
         return edge;
     }
 
@@ -32,13 +32,13 @@ class Node {
         return parent;
     }
 
-    public void update(Node parent, Edge edge) {
+    public void update(Node parent, Edge<Vertex> edge) {
         this.parent = parent;
         this.edge = edge;
         this.cost = parent.cost() + edge.cost();
     }
 
-    public double cost() {
+    public float cost() {
         return cost;
     }
 

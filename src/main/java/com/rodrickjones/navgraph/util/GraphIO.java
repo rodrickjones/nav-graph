@@ -1,8 +1,8 @@
 package com.rodrickjones.navgraph.util;
 
 import com.rodrickjones.navgraph.edge.Edge;
-import com.rodrickjones.navgraph.edge.EdgeLiteral;
 import com.rodrickjones.navgraph.edge.EdgeReader;
+import com.rodrickjones.navgraph.edge.VertexEdgeLiteral;
 import com.rodrickjones.navgraph.graph.SimpleGraph;
 import com.rodrickjones.navgraph.requirement.RequirementReader;
 import com.rodrickjones.navgraph.vertex.Vertex;
@@ -86,11 +86,11 @@ public class GraphIO {
             edgesEntry.setComment(String.valueOf(edgeCount));
             zipOut.putNextEntry(edgesEntry);
             dos.writeInt(edgeCount);
-            Iterator<Edge> edgeIterator = graph.edges().iterator();
+            Iterator<Edge<Vertex>> edgeIterator = graph.edges().iterator();
             while (edgeIterator.hasNext()) {
-                Edge edge = edgeIterator.next();
+                Edge<Vertex> edge = edgeIterator.next();
                 // FIXME
-                ((EdgeLiteral) edge).writeToDataStream(dos);
+                ((VertexEdgeLiteral) edge).writeToDataStream(dos);
             }
 
             zipOut.finish();

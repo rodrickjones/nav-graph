@@ -32,19 +32,16 @@ public class AStar extends PathfindingAlgorithm<Graph> {
                 return res;
             }
             explored.put(current.vertex(), current);
-            Stream<Edge> edges = graph.edges(current.vertex());
-            if (edges == null) {
-                continue;
-            }
-            Iterator<Edge> edgeIterator = edges.iterator();
+            Stream<Edge<Vertex>> edges = graph.edges(current.vertex());
+            Iterator<Edge<Vertex>> edgeIterator = edges.iterator();
             while (edgeIterator.hasNext()) {
-                Edge edge = edgeIterator.next();
+                Edge<Vertex> edge = edgeIterator.next();
                 Requirement requirement = edge.requirement();
-                if (requirement != null && !requirement.satisfy(context)) {
+                if (!requirement.satisfy(context)) {
                     continue;
                 }
                 Node node = explored.get(edge.destination());
-                double cost = current.cost() + edge.cost();
+                float cost = current.cost() + edge.cost();
                 if (node == null) {
                     node = new Node(edge.destination(), current, edge, cost, heuristic(destinations, edge.destination()));
                     if (!frontier.contains(node)) {

@@ -1,7 +1,9 @@
 package com.rodrickjones.navgraph.graph.hierarchical;
 
+import com.rodrickjones.navgraph.graph.Graph;
 import com.rodrickjones.navgraph.vertex.Vertex;
 import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -15,7 +17,7 @@ class SimpleRegion implements Region {
     private final long id;
     private final int baseX;
     private final int baseY;
-    List<SimpleSubRegion> subRegions = new ArrayList<>();
+    List<Graph> subGraphs = new ArrayList<>();
 
     public SimpleRegion(long id) {
         this.id = id;
@@ -38,26 +40,26 @@ class SimpleRegion implements Region {
     }
 
     @Override
-    public @Nullable SimpleSubRegion subRegion(@NonNull Vertex vertex) {
-        return subRegions.stream().filter(s -> s.contains(vertex)).findAny().orElse(null);
+    public @Nullable Graph subGraph(@NonNull Vertex vertex) {
+        return subGraphs.stream().filter(s -> s.containsVertex(vertex)).findAny().orElse(null);
     }
 
     @Override
-    public int subRegionCount() {
-        return subRegions.size();
+    public int subGraphCount() {
+        return subGraphs.size();
     }
 
     @Override
-    public Stream<SubRegion> subRegions() {
-        return subRegions.stream().map(Function.identity());
+    public @NotNull Stream<Graph> subGraphs() {
+        return subGraphs.stream().map(Function.identity());
     }
 
-    void addSubRegion(SimpleSubRegion subRegion) {
-        subRegions.add(subRegion);
+    void addSubGraph(Graph subGraph) {
+        subGraphs.add(subGraph);
     }
 
     @Override
     public boolean contains(@NonNull Vertex vertex) {
-        return subRegions.stream().anyMatch(s -> s.contains(vertex));
+        return subGraphs.stream().anyMatch(s -> s.containsVertex(vertex));
     }
 }

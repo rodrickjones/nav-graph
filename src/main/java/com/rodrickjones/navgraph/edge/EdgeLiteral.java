@@ -1,51 +1,40 @@
 package com.rodrickjones.navgraph.edge;
 
 import com.rodrickjones.navgraph.requirement.Requirement;
-import com.rodrickjones.navgraph.requirement.RequirementBase;
-import com.rodrickjones.navgraph.requirement.RequirementReader;
 import com.rodrickjones.navgraph.requirement.Requirements;
-import com.rodrickjones.navgraph.vertex.Vertex;
-import com.rodrickjones.navgraph.vertex.VertexLiteral;
 import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+public class EdgeLiteral<V> implements Edge<V> {
 
-public abstract class EdgeLiteral implements Edge {
-    private final Vertex origin;
-    private final Vertex destination;
-    private final float cost;
-    private final Requirement requirement;
+    public static final int TYPE = 0;
 
-    protected EdgeLiteral(@NonNull Vertex origin, @NonNull Vertex destination, float cost, @NonNull Requirement requirement) {
+    protected final V origin;
+    protected final V destination;
+    protected final float cost;
+    protected final Requirement requirement;
+
+    public EdgeLiteral(@NonNull V origin, @NonNull V destination, float cost, @NonNull Requirement requirement) {
         this.origin = origin;
         this.destination = destination;
         this.cost = cost;
         this.requirement = requirement;
     }
 
-    protected EdgeLiteral(@NonNull Vertex origin, @NonNull Vertex destination, float cost) {
+    public EdgeLiteral(@NonNull V origin, @NonNull V destination, float cost) {
         this.origin = origin;
         this.destination = destination;
         this.cost = cost;
         this.requirement = Requirements.none();
     }
 
-    protected EdgeLiteral(DataInputStream in, RequirementReader reader) throws IOException {
-        this.origin = VertexLiteral.readFromDataStream(in);
-        this.destination = VertexLiteral.readFromDataStream(in);
-        this.cost = in.readFloat();
-        this.requirement = in.readBoolean() ? reader.readRequirement(in) : null;
-    }
-
     @Override
-    public Vertex origin() {
+    public @NotNull V origin() {
         return origin;
     }
 
     @Override
-    public Vertex destination() {
+    public @NotNull V destination() {
         return destination;
     }
 
@@ -55,23 +44,22 @@ public abstract class EdgeLiteral implements Edge {
     }
 
     @Override
-    public Requirement requirement() {
+    public @NotNull Requirement requirement() {
         return requirement;
     }
 
-    public void writeToDataStream(DataOutputStream dos) throws IOException {
-        dos.writeInt(getType());
-        // FIXME
-        ((VertexLiteral) origin).writeToDataStream(dos);
-        ((VertexLiteral) destination).writeToDataStream(dos);
-        dos.writeFloat(cost());
-        Requirement requirement = requirement();
-        if (requirement != null) {
-            dos.writeBoolean(true);
-            // FIXME
-            ((RequirementBase) requirement).writeToDataStream(dos);
-        } else {
-            dos.writeBoolean(false);
-        }
+    @Override
+    public int type() {
+        return TYPE;
+    }
+
+    @Override
+    public String toString() {
+        return "EdgeLiteral{" +
+                "origin=" + origin +
+                ", destination=" + destination +
+                ", cost=" + cost +
+                ", requirement=" + requirement +
+                '}';
     }
 }

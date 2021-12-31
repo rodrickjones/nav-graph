@@ -1,8 +1,8 @@
 package com.rodrickjones.navgraph.pathfinding;
 
 import com.rodrickjones.navgraph.edge.Edge;
-import com.rodrickjones.navgraph.edge.EdgeLiteral;
 import com.rodrickjones.navgraph.edge.EdgeReader;
+import com.rodrickjones.navgraph.edge.VertexEdgeLiteral;
 import com.rodrickjones.navgraph.requirement.RequirementReader;
 import com.rodrickjones.navgraph.vertex.Vertex;
 import com.rodrickjones.navgraph.vertex.VertexLiteral;
@@ -16,20 +16,20 @@ import java.util.List;
 // TODO make package-private or extract interface
 public class Path {
     private final List<Vertex> vertices;
-    private final List<Edge> edges;
-    private final double cost;
+    private final List<Edge<Vertex>> edges;
+    private final float cost;
 
-    public Path(List<Vertex> vertices, List<Edge> edges) {
+    public Path(List<Vertex> vertices, List<Edge<Vertex>> edges) {
         this.vertices = vertices;
         this.edges = edges;
-        cost = edges.stream().mapToDouble(Edge::cost).sum();
+        cost = (float) edges.stream().mapToDouble(Edge::cost).sum();
     }
 
     public List<Vertex> getVertices() {
         return vertices;
     }
 
-    public List<Edge> getEdges() {
+    public List<Edge<Vertex>> getEdges() {
         return edges;
     }
 
@@ -47,9 +47,9 @@ public class Path {
         }
 
         int edgeCount = in.readInt();
-        List<Edge> edges = new ArrayList<>(edgeCount);
+        List<Edge<Vertex>> edges = new ArrayList<>(edgeCount);
         for (int i = 0; i < edgeCount; i++) {
-            Edge edge = edgeReader.readEdge(in, requirementReader);
+            Edge<Vertex> edge = edgeReader.readEdge(in, requirementReader);
             edges.add(edge);
         }
 
@@ -63,9 +63,9 @@ public class Path {
             ((VertexLiteral) v).writeToDataStream(out);
         }
         out.writeInt(edges.size());
-        for (Edge e : edges) {
+        for (Edge<Vertex> e : edges) {
             // FIXME
-            ((EdgeLiteral) e).writeToDataStream(out);
+            ((VertexEdgeLiteral) e).writeToDataStream(out);
         }
     }
 
