@@ -14,11 +14,11 @@ public interface Region {
 
     int baseY();
 
-    @NotNull Stream<Graph> subGraphs();
+    @NotNull Stream<Graph<Vertex>> graphs();
 
-    @Nullable Graph subGraph(@NonNull Vertex vertex);
+    @Nullable Graph<Vertex> graph(@NonNull Vertex vertex);
 
-    int subGraphCount();
+    long graphCount();
 
     boolean contains(@NonNull Vertex vertex);
 }

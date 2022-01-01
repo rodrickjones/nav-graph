@@ -2,9 +2,13 @@ package com.rodrickjones.navgraph.edge;
 
 import com.rodrickjones.navgraph.requirement.Requirement;
 import com.rodrickjones.navgraph.requirement.Requirements;
+import lombok.EqualsAndHashCode;
 import lombok.NonNull;
+import lombok.ToString;
 import org.jetbrains.annotations.NotNull;
 
+@EqualsAndHashCode
+@ToString
 public class EdgeLiteral<V> implements Edge<V> {
 
     public static final int TYPE = 0;
@@ -51,15 +55,5 @@ public class EdgeLiteral<V> implements Edge<V> {
     @Override
     public int type() {
         return TYPE;
-    }
-
-    @Override
-    public String toString() {
-        return "EdgeLiteral{" +
-                "origin=" + origin +
-                ", destination=" + destination +
-                ", cost=" + cost +
-                ", requirement=" + requirement +
-                '}';
     }
 }

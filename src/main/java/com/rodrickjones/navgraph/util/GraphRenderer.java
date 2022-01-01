@@ -17,16 +17,16 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class GraphRenderer {
+public class GraphRenderer<V> {
 
-    public static BufferedImage renderToImage(Graph graph, int plane, int vertexSize, Path... paths) {
+    public static <V extends Vertex> BufferedImage renderToImage(Graph<V> graph, int plane, int vertexSize, Path<V>... paths) {
         int minX = Integer.MAX_VALUE;
         int minY = Integer.MAX_VALUE;
         int maxX = 0;
         int maxY = 0;
-        Iterator<Vertex> vertexIterator = graph.vertices().iterator();
+        Iterator<V> vertexIterator = graph.vertices().iterator();
         while (vertexIterator.hasNext()) {
-            Vertex vertex = vertexIterator.next();
+            V vertex = vertexIterator.next();
             int x = vertex.x();
             int y = vertex.y();
             if (x < minX) {
@@ -61,11 +61,11 @@ public class GraphRenderer {
         Color wall = Color.BLACK;
         vertexIterator = graph.vertices().iterator();
         while (vertexIterator.hasNext()) {
-            Vertex vertex = vertexIterator.next();
+            V vertex = vertexIterator.next();
             if (vertex.z() != plane) {
                 continue;
             }
-            Stream<Edge<Vertex>> edges = graph.edges(vertex);
+            Stream<Edge<V>> edges = graph.edges(vertex);
             int x = vertex.x() - minX;
             int y = vertex.y() - minY;
 
@@ -101,21 +101,20 @@ public class GraphRenderer {
         }
 
         int offset = (int) ((vertexSize + 0.5d) / 2);
-        List<Edge<Vertex>> nonBasicEdges = new ArrayList<>(10000);
+        List<Edge<V>> nonBasicEdges = new ArrayList<>(10000);
         graphics.setPaint(Color.GREEN);
         vertexIterator = graph.vertices().iterator();
         while (vertexIterator.hasNext()) {
-            Vertex vertex = vertexIterator.next();
+            V vertex = vertexIterator.next();
             if (vertex.z() != plane) {
                 continue;
             }
             int x = vertex.x() - minX;
             int y = vertex.y() - minY;
-            Stream<Edge<Vertex>> edges = graph.edges(vertex);
-            assert Objects.nonNull(edges);
-            Iterator<Edge<Vertex>> edgeIterator = edges.iterator();
+            Stream<Edge<V>> edges = graph.edges(vertex);
+            Iterator<Edge<V>> edgeIterator = edges.iterator();
             while (edgeIterator.hasNext()) {
-                Edge<Vertex> edge = edgeIterator.next();
+                Edge<V> edge = edgeIterator.next();
                 if (edge.type() != EdgeLiteral.TYPE) {
                     nonBasicEdges.add(edge);
                     continue;
@@ -128,7 +127,7 @@ public class GraphRenderer {
         Stroke oldStroke = graphics.getStroke();
         graphics.setPaint(Color.BLUE);
         graphics.setStroke(new BasicStroke(1, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[]{vertexSize}, 0));
-        for (Edge<Vertex> edge : nonBasicEdges) {
+        for (Edge<V> edge : nonBasicEdges) {
             Vertex origin = edge.origin();
             Vertex destination = edge.destination();
             graphics.drawLine((origin.x() - minX) * vertexSize + offset, (origin.y() - minY) * vertexSize + offset,
@@ -136,8 +135,8 @@ public class GraphRenderer {
         }
         graphics.setStroke(oldStroke);
 
-        for (Path p : paths) {
-            for (Edge<Vertex> edge : p.getEdges()) {
+        for (Path<V> p : paths) {
+            for (Edge<V> edge : p.getEdges()) {
                 Vertex origin = edge.origin();
                 Vertex destination = edge.destination();
                 if (edge.type() == 0) {
@@ -154,7 +153,7 @@ public class GraphRenderer {
         return image;
     }
 
-    public static void renderToFile(Graph graph, int plane, int vertexSize, File imageFile, Path... paths) throws IOException {
+    public static <V extends Vertex> void renderToFile(Graph<V> graph, int plane, int vertexSize, File imageFile, Path<V>... paths) throws IOException {
         if (imageFile.exists()) {
             imageFile.delete();
         }

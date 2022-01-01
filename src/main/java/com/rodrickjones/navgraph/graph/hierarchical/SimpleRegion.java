@@ -17,7 +17,7 @@ class SimpleRegion implements Region {
     private final long id;
     private final int baseX;
     private final int baseY;
-    List<Graph> subGraphs = new ArrayList<>();
+    List<Graph<Vertex>> graphs = new ArrayList<>();
 
     public SimpleRegion(long id) {
         this.id = id;
@@ -40,26 +40,26 @@ class SimpleRegion implements Region {
     }
 
     @Override
-    public @Nullable Graph subGraph(@NonNull Vertex vertex) {
-        return subGraphs.stream().filter(s -> s.containsVertex(vertex)).findAny().orElse(null);
+    public @NotNull Stream<Graph<Vertex>> graphs() {
+        return graphs.stream();
     }
 
     @Override
-    public int subGraphCount() {
-        return subGraphs.size();
+    public @Nullable Graph<Vertex> graph(@NonNull Vertex vertex) {
+        return graphs.stream().filter(s -> s.containsVertex(vertex)).findAny().orElse(null);
     }
 
     @Override
-    public @NotNull Stream<Graph> subGraphs() {
-        return subGraphs.stream().map(Function.identity());
+    public long graphCount() {
+        return graphs.size();
     }
 
-    void addSubGraph(Graph subGraph) {
-        subGraphs.add(subGraph);
+    void addSubGraph(Graph<Vertex> subGraph) {
+        graphs.add(subGraph);
     }
 
     @Override
     public boolean contains(@NonNull Vertex vertex) {
-        return subGraphs.stream().anyMatch(s -> s.containsVertex(vertex));
+        return graphs.stream().anyMatch(s -> s.containsVertex(vertex));
     }
 }

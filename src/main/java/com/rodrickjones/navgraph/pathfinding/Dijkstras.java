@@ -5,8 +5,9 @@ import com.rodrickjones.navgraph.vertex.Vertex;
 
 import java.util.Collection;
 
-public class Dijkstras extends AStar {
-    public Dijkstras(Graph graph) {
+public abstract class Dijkstras<G extends Graph<?>> extends AStar<G> {
+
+    public Dijkstras(G graph) {
         super(graph);
     }
 

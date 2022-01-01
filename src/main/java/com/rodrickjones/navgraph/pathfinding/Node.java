@@ -5,14 +5,14 @@ import com.rodrickjones.navgraph.vertex.Vertex;
 
 import java.util.Objects;
 
-class Node {
-    private final Vertex vertex;
+class Node<V> {
+    private final V vertex;
     private final double heuristic;
-    private Edge<Vertex> edge;
-    private Node parent;
+    private Edge<V> edge;
+    private Node<V> parent;
     private float cost;
 
-    Node(Vertex vertex, Node parent, Edge<Vertex> edge, float cost, double heuristic) {
+    Node(V vertex, Node<V> parent, Edge<V> edge, float cost, double heuristic) {
         this.vertex = vertex;
         this.parent = parent;
         this.edge = edge;
@@ -20,19 +20,19 @@ class Node {
         this.heuristic = heuristic;
     }
 
-    public Vertex vertex() {
+    public V vertex() {
         return vertex;
     }
 
-    public Edge<Vertex> edge() {
+    public Edge<V> edge() {
         return edge;
     }
 
-    public Node parent() {
+    public Node<V> parent() {
         return parent;
     }
 
-    public void update(Node parent, Edge<Vertex> edge) {
+    public void update(Node<V> parent, Edge<V> edge) {
         this.parent = parent;
         this.edge = edge;
         this.cost = parent.cost() + edge.cost();
@@ -54,7 +54,7 @@ class Node {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        Node node = (Node) o;
+        Node<?> node = (Node<?>) o;
         return Objects.equals(vertex, node.vertex);
     }
 

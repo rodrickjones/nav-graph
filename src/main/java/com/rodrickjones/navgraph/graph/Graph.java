@@ -1,26 +1,25 @@
 package com.rodrickjones.navgraph.graph;
 
 import com.rodrickjones.navgraph.edge.Edge;
-import com.rodrickjones.navgraph.vertex.Vertex;
 import lombok.NonNull;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.stream.Stream;
 
 
-public interface Graph {
+public interface Graph<V> {
 
-    @NotNull Stream<Vertex> vertices();
+    @NotNull Stream<V> vertices();
 
-    int vertexCount();
+    long vertexCount();
 
-    boolean containsVertex(@NonNull Vertex vertex);
+    boolean containsVertex(@NonNull V vertex);
 
-    @NotNull Stream<Edge<Vertex>> edges();
+    @NotNull Stream<Edge<V>> edges();
 
-    @NotNull Stream<Edge<Vertex>> edges(@NonNull Vertex vertex);
+    @NotNull Stream<Edge<V>> edges(@NonNull V vertex);
 
-    int edgeCount();
+    long edgeCount();
 
-    boolean containsEdge(Edge<Vertex> edge);
+    boolean containsEdge(@NonNull Edge<V> edge);
 }

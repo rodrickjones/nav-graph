@@ -9,22 +9,22 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 
-public abstract class PathfindingAlgorithm<T extends Graph> {
-    protected final T graph;
+public abstract class PathfindingAlgorithm<G extends Graph<?>, V> {
+    protected final G graph;
 
-    public PathfindingAlgorithm(T graph) {
+    public PathfindingAlgorithm(G graph) {
         this.graph = graph;
     }
 
-    public abstract Path findPath(Vertex origin, Collection<Vertex> destinations, RequirementContext context);
+    public abstract Path<V> findPath(V origin, Collection<V> destinations, RequirementContext context);
 
-    protected Path backtrackAndBuildPath(Node current) {
-        ArrayList<Vertex> vertices = new ArrayList<>();
-        ArrayList<Edge<Vertex>> edges = new ArrayList<>();
+    protected Path<V> backtrackAndBuildPath(Node<V> current) {
+        ArrayList<V> vertices = new ArrayList<>();
+        ArrayList<Edge<V>> edges = new ArrayList<>();
 
         while (current.parent() != null) {
             vertices.add(current.vertex());
-            Edge<Vertex> edge = current.edge();
+            Edge<V> edge = current.edge();
             edges.add(edge);
             current = current.parent();
         }
@@ -35,7 +35,7 @@ public abstract class PathfindingAlgorithm<T extends Graph> {
 
         Collections.reverse(vertices);
         Collections.reverse(edges);
-        return new Path(vertices, edges);
+        return new Path<>(vertices, edges);
     }
 
 }

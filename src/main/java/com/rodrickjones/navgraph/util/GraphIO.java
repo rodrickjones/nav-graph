@@ -3,6 +3,8 @@ package com.rodrickjones.navgraph.util;
 import com.rodrickjones.navgraph.edge.Edge;
 import com.rodrickjones.navgraph.edge.EdgeReader;
 import com.rodrickjones.navgraph.edge.VertexEdgeLiteral;
+import com.rodrickjones.navgraph.graph.Graph;
+import com.rodrickjones.navgraph.graph.MutableGraph;
 import com.rodrickjones.navgraph.graph.SimpleGraph;
 import com.rodrickjones.navgraph.requirement.RequirementReader;
 import com.rodrickjones.navgraph.vertex.Vertex;
@@ -22,12 +24,12 @@ public class GraphIO {
     //    public final static String VERSION = "1.0.0";
     public final static Charset CHARSET = StandardCharsets.US_ASCII;
 
-    public static <T extends SimpleGraph> T readFromZip(File zipFile, Class<T> tClass,
-                                                  EdgeReader edgeReader,
-                                                  RequirementReader requirementReader) {
+    public static <G extends MutableGraph<Vertex>> G readFromZip(File zipFile, Class<G> tClass,
+                                                            EdgeReader edgeReader,
+                                                            RequirementReader requirementReader) {
         try (ZipInputStream zipIn = new ZipInputStream(new FileInputStream(zipFile), CHARSET);
              DataInputStream dataIn = new DataInputStream(zipIn)) {
-            T graph = tClass.getConstructor().newInstance();
+            G graph = tClass.getConstructor().newInstance();
             ZipEntry entry;
             while ((entry = zipIn.getNextEntry()) != null) {
                 switch (entry.getName()) {
@@ -59,7 +61,7 @@ public class GraphIO {
     }
 
 
-    public static void writeToZip(SimpleGraph graph, File zipFile, int compressionLevel) {
+    public static void writeToZip(Graph<Vertex> graph, File zipFile, int compressionLevel) {
         try (ZipOutputStream zipOut = new ZipOutputStream(new FileOutputStream(zipFile), CHARSET);
              DataOutputStream dos = new DataOutputStream(zipOut)) {
             zipOut.setLevel(compressionLevel);
@@ -70,10 +72,10 @@ public class GraphIO {
 //            dataOut.writeUTF(VERSION);
 
             ZipEntry verticesEntry = new ZipEntry("vertices");
-            int vertexCount = graph.vertexCount();
+            long vertexCount = graph.vertexCount();
             verticesEntry.setComment(String.valueOf(vertexCount));
             zipOut.putNextEntry(verticesEntry);
-            dos.writeInt(vertexCount);
+            dos.writeInt((int) vertexCount);
             Iterator<Vertex> vertexIterator = graph.vertices().iterator();
             while (vertexIterator.hasNext()) {
                 Vertex vertex = vertexIterator.next();
@@ -82,10 +84,10 @@ public class GraphIO {
             }
 
             ZipEntry edgesEntry = new ZipEntry("edges");
-            int edgeCount = graph.edgeCount();
+            long edgeCount = graph.edgeCount();
             edgesEntry.setComment(String.valueOf(edgeCount));
             zipOut.putNextEntry(edgesEntry);
-            dos.writeInt(edgeCount);
+            dos.writeInt((int) edgeCount);
             Iterator<Edge<Vertex>> edgeIterator = graph.edges().iterator();
             while (edgeIterator.hasNext()) {
                 Edge<Vertex> edge = edgeIterator.next();
@@ -99,7 +101,7 @@ public class GraphIO {
         }
     }
 
-    public static void writeToZip(SimpleGraph graph, File zipFile) {
+    public static void writeToZip(Graph<Vertex> graph, File zipFile) {
         writeToZip(graph, zipFile, Deflater.BEST_COMPRESSION);
     }
 

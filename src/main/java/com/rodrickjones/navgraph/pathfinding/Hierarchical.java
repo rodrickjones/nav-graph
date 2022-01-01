@@ -3,27 +3,30 @@ package com.rodrickjones.navgraph.pathfinding;
 import com.rodrickjones.navgraph.edge.Edge;
 import com.rodrickjones.navgraph.graph.Graph;
 import com.rodrickjones.navgraph.graph.SimpleGraph;
-import com.rodrickjones.navgraph.graph.hierarchical.SimpleHierarchicalGraph;
+import com.rodrickjones.navgraph.graph.hierarchical.HierarchicalGraph;
 import com.rodrickjones.navgraph.requirement.RequirementContext;
 import com.rodrickjones.navgraph.util.Frontier;
 import com.rodrickjones.navgraph.vertex.Vertex;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
-public class Hierarchical extends PathfindingAlgorithm<SimpleHierarchicalGraph> {
-    public Hierarchical(SimpleHierarchicalGraph graph) {
+public class Hierarchical extends PathfindingAlgorithm<HierarchicalGraph<Graph<Vertex>, Vertex>, Vertex> {
+    public Hierarchical(HierarchicalGraph<Graph<Vertex>, Vertex> graph) {
         super(graph);
     }
 
     @Override
-    public Path findPath(Vertex origin, Collection<Vertex> destinations, RequirementContext context) {
+    public Path<Vertex> findPath(Vertex origin, Collection<Vertex> destinations, RequirementContext context) {
         long start = System.currentTimeMillis();
         //find path of sections
-        Graph originSubGraph = graph.subGraph(origin);
-        Collection<Graph> destinationSubGraphs = destinations.stream().map(graph::subGraph)
+        Graph<Vertex> originSubGraph = graph.sub(origin);
+        Collection<Graph<Vertex>> destinationSubGraphs = destinations.stream().map(graph::sub)
                 .filter(Objects::nonNull).collect(Collectors.toList());
         if (originSubGraph == null || destinationSubGraphs.isEmpty()) {
             log.warn("Unable to find origin and destination sub regions: origin={}, originSubGraph={}, destination={}, destinationSubGraph={}", origin, originSubGraph, destinations, destinationSubGraphs);
@@ -32,22 +35,22 @@ public class Hierarchical extends PathfindingAlgorithm<SimpleHierarchicalGraph> 
         }
         Queue<SubGraphNode> frontier = new Frontier<>(Comparator.comparingDouble(SubGraphNode::cost));
         frontier.add(new SubGraphNode(originSubGraph, null, 0));
-        Map<Graph, SubGraphNode> explored = new HashMap<>();
-        SimpleGraph leanGraph = null;
+        Map<Graph<Vertex>, SubGraphNode> explored = new HashMap<>();
+        SimpleGraph<Graph<Vertex>> leanGraph = null;
         while (!frontier.isEmpty()) {
             SubGraphNode current = frontier.poll();
-            if (destinationSubGraphs.contains(current.getSubGraph())) {
-                leanGraph = new SimpleGraph();
-                addToGraph(leanGraph, current.getSubGraph());
-                while ((current = current.getParent()) != null) {
-                    addToGraph(leanGraph, current.getSubGraph());
-                }
+            if (destinationSubGraphs.contains(current.subGraph())) {
+                leanGraph = new SimpleGraph<>();
+                do {
+                    leanGraph.addVertex(current.subGraph());
+                    leanGraph.addEdges(graph.edges(current.subGraph()));
+                } while ((current = current.parent()) != null);
                 break;
             }
-            explored.put(current.getSubGraph(), current);
-            Iterator<Edge<Graph>> subGraphEdgeIterator = graph.edges(current.getSubGraph()).iterator();
+            explored.put(current.subGraph(), current);
+            Iterator<Edge<Graph<Vertex>>> subGraphEdgeIterator = graph.edges(current.subGraph()).iterator();
             while (subGraphEdgeIterator.hasNext()) {
-                Edge<Graph> subGraphEdge = subGraphEdgeIterator.next();
+                Edge<Graph<Vertex>> subGraphEdge = subGraphEdgeIterator.next();
                 if (!subGraphEdge.requirement().satisfy(context)) {
                     continue;
                 }
@@ -59,57 +62,61 @@ public class Hierarchical extends PathfindingAlgorithm<SimpleHierarchicalGraph> 
                     if (!frontier.contains(node)) {
                         frontier.add(node);
                     }
-                } else if (cost < node.cost()) {
-                    node.setParent(current, subGraphEdge);
+                }
+                else if (cost < node.cost()) {
+                    node.parent(current, subGraphEdge);
                 }
             }
         }
         if (leanGraph != null) {
             log.trace("Lean graph found in {}ms: {}", System.currentTimeMillis() - start, leanGraph);
-            PathfindingAlgorithm<Graph> pathfindingAlgorithm = new AStar(leanGraph);
-            Path path = pathfindingAlgorithm.findPath(origin, destinations, context);
+            PathfindingAlgorithm<Graph<Graph<Vertex>>, Vertex> pathfindingAlgorithm = new AStar<Graph<Graph<Vertex>>>(leanGraph) {
+                @Override
+                protected @NotNull Stream<Edge<Vertex>> edges(@NonNull Vertex vertex) {
+                    return graph.vertices()
+                            .filter(subGraph -> subGraph.containsVertex(vertex))
+                            .findFirst()
+                            .map(subGraph -> subGraph.edges(vertex))
+                            .orElseGet(Stream::empty);
+                }
+            };
+            Path<Vertex> path = pathfindingAlgorithm.findPath(origin, destinations, context);
             if (path != null) {
                 log.trace("Path created: {}ms", System.currentTimeMillis() - start);
-            } else {
+            }
+            else {
                 //We should never see this, unless the SubGraph linking has issues
                 log.error("No path, unable to find path: {}ms", System.currentTimeMillis() - start);
             }
             return path;
-        } else {
+        }
+        else {
             log.warn("Unable to find lean graph for subGraph: origin={}, destinations={}", originSubGraph, destinationSubGraphs);
             log.trace("No path, unable to find lean graph: {}ms", System.currentTimeMillis() - start);
             return null;
         }
     }
 
-    // TODO revisit
-    private void addToGraph(SimpleGraph leanGraph, Graph subGraph) {
-        subGraph.vertices().forEachOrdered(vertex -> {
-            leanGraph.addVertex(vertex);
-            leanGraph.addEdges(graph.edges(vertex));
-        });
-    }
-
     static class SubGraphNode {
-        final Graph subGraph;
+        final Graph<Vertex> subGraph;
         SubGraphNode parent;
         float cost;
 
-        SubGraphNode(Graph subGraph, SubGraphNode parent, float cost) {
+        SubGraphNode(Graph<Vertex> subGraph, SubGraphNode parent, float cost) {
             this.subGraph = subGraph;
             this.parent = parent;
             this.cost = cost;
         }
 
-        public Graph getSubGraph() {
+        public Graph<Vertex> subGraph() {
             return subGraph;
         }
 
-        public SubGraphNode getParent() {
+        public SubGraphNode parent() {
             return parent;
         }
 
-        public void setParent(SubGraphNode parent, Edge<Graph> edge) {
+        public void parent(SubGraphNode parent, Edge<Graph<Vertex>> edge) {
             this.parent = parent;
             this.cost = parent.cost() + edge.cost();
         }

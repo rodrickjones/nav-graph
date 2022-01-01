@@ -1,12 +1,16 @@
 package com.rodrickjones.navgraph.vertex;
 
+import lombok.EqualsAndHashCode;
 import lombok.NonNull;
+import lombok.ToString;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Objects;
 
+@EqualsAndHashCode
+@ToString
 public class VertexLiteral implements Vertex {
     private final int x;
     private final int y;
@@ -31,28 +35,6 @@ public class VertexLiteral implements Vertex {
     @Override
     public int z() {
         return z;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        VertexLiteral vertex = (VertexLiteral) o;
-        return x == vertex.x && y == vertex.y && z == vertex.z;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(x, y, z);
-    }
-
-    @Override
-    public String toString() {
-        return "Vertex{" +
-                "x=" + x +
-                ", y=" + y +
-                ", z=" + z +
-                '}';
     }
 
     public void writeToDataStream(DataOutputStream dataOutputStream) throws IOException {

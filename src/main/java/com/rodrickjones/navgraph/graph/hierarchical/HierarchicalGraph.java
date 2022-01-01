@@ -1,20 +1,14 @@
 package com.rodrickjones.navgraph.graph.hierarchical;
 
-import com.rodrickjones.navgraph.edge.Edge;
 import com.rodrickjones.navgraph.graph.Graph;
+import com.rodrickjones.navgraph.graph.MutableGraph;
 import com.rodrickjones.navgraph.vertex.Vertex;
 import lombok.NonNull;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.stream.Stream;
+public interface HierarchicalGraph<G extends Graph<V>, V> extends Graph<G> {
+    @Nullable G sub(@NonNull V vertex);
 
-public interface HierarchicalGraph {
-    @NonNull Stream<Region> regions();
-
-    @Deprecated
-    @Nullable Graph subGraph(@NonNull Vertex vertex);
-
-    @Deprecated
-    @NotNull Stream<Edge<Graph>> edges(@NonNull Graph subGraph);
+    @NotNull <F extends Graph<Vertex> & MutableGraph<Vertex>> F flatten();
 }

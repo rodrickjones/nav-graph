@@ -1,7 +1,6 @@
 package com.rodrickjones.navgraph.graph;
 
 import com.rodrickjones.navgraph.edge.Edge;
-import com.rodrickjones.navgraph.vertex.Vertex;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -11,9 +10,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Slf4j
-public class SimpleGraph implements MutableGraph {
-    private final Set<Vertex> vertices;
-    private final Map<Vertex, Collection<Edge<Vertex>>> edges;
+public class SimpleGraph<V> implements Graph<V>, MutableGraph<V> {
+    private final Set<V> vertices;
+    private final Map<V, Collection<Edge<V>>> edges;
 
     public SimpleGraph() {
         this(3000000, 12000000);
@@ -24,25 +23,26 @@ public class SimpleGraph implements MutableGraph {
         edges = new HashMap<>(initialEdgeCapacity);
     }
 
-    public SimpleGraph(@NonNull Collection<Vertex> vertices, @NonNull Collection<Edge<Vertex>> edges) {
+    public SimpleGraph(@NonNull Collection<V> vertices, @NonNull Collection<Edge<V>> edges) {
         this(vertices.size(), vertices.size());
         addVertices(vertices.stream());
         addEdges(edges.stream());
     }
 
-    public void cleanUp() {
-        List<Vertex> verticesToRemove = vertices.stream().filter(v -> !edges.containsKey(v)).collect(Collectors.toList());
-        for (Vertex vertex : verticesToRemove) {
+    // TODO revisit concurrency
+    public synchronized void compact() {
+        List<V> verticesToRemove = vertices.stream().filter(v -> !edges.containsKey(v)).collect(Collectors.toList());
+        for (V vertex : verticesToRemove) {
             vertices.remove(vertex);
             edges.remove(vertex);
         }
         int removedEdges = 0;
-        for (Collection<Edge<Vertex>> edgeCollection : edges.values()) {
-            List<Edge<Vertex>> toRemove = edgeCollection.stream().filter(edge -> !vertices.contains(edge.destination())).collect(Collectors.toList());
+        for (Collection<Edge<V>> edgeCollection : edges.values()) {
+            List<Edge<V>> toRemove = edgeCollection.stream().filter(edge -> !vertices.contains(edge.destination())).collect(Collectors.toList());
             removedEdges += toRemove.size();
             edgeCollection.removeAll(toRemove);
             if (edgeCollection instanceof ArrayList<?>) {
-                ((ArrayList<Edge<Vertex>>) edgeCollection).trimToSize();
+                ((ArrayList<Edge<V>>) edgeCollection).trimToSize();
             }
         }
         edges.values().forEach(e1 -> e1.removeIf(e -> !vertices.contains(e.destination())));
@@ -51,38 +51,38 @@ public class SimpleGraph implements MutableGraph {
     }
 
     @Override
-    public int vertexCount() {
+    public long vertexCount() {
         return vertices.size();
     }
 
     @Override
-    public boolean containsVertex(@NonNull Vertex vertex) {
+    public boolean containsVertex(@NonNull V vertex) {
         return vertices.contains(vertex);
     }
 
     @Override
-    public @NotNull Stream<Vertex> vertices() {
+    public @NotNull Stream<V> vertices() {
         return vertices.stream();
     }
 
     @Override
-    public void addVertices(@NonNull Stream<Vertex> vertices) {
+    public void addVertices(@NonNull Stream<V> vertices) {
         vertices.forEachOrdered(this::addVertex);
     }
 
     @Override
-    public void addVertex(@NonNull Vertex vertex) {
+    public void addVertex(@NonNull V vertex) {
         vertices.add(vertex);
     }
 
     @Override
-    public @NotNull Stream<Edge<Vertex>> edges() {
+    public @NotNull Stream<Edge<V>> edges() {
         return edges.values().stream().flatMap(Collection::stream);
     }
 
     @Override
-    public @NotNull Stream<Edge<Vertex>> edges(@NonNull Vertex vertex) {
-        Collection<Edge<Vertex>> value = edges.get(vertex);
+    public @NotNull Stream<Edge<V>> edges(@NonNull V vertex) {
+        Collection<Edge<V>> value = edges.get(vertex);
         if (value == null) {
             return Stream.empty();
         }
@@ -90,30 +90,30 @@ public class SimpleGraph implements MutableGraph {
     }
 
     @Override
-    public void addEdges(@NonNull Stream<Edge<Vertex>> edges) {
+    public void addEdges(@NonNull Stream<Edge<V>> edges) {
         edges.forEachOrdered(this::addEdge);
     }
 
     @Override
-    public void addEdge(@NonNull Edge<Vertex> edge) {
-        Vertex vertex = edge.origin();
-        Collection<Edge<Vertex>> edges = this.edges.computeIfAbsent(vertex, k -> new LinkedHashSet<>(4));
-        Optional<Edge<Vertex>> conflict;
+    public void addEdge(@NonNull Edge<V> edge) {
+        V origin = edge.origin();
+        Collection<Edge<V>> edges = this.edges.computeIfAbsent(origin, k -> new LinkedHashSet<>(4));
+        Optional<Edge<V>> conflict;
         if (edges.contains(edge)) {
-            throw new IllegalStateException(edge + " already exists for " + vertex);
+            throw new IllegalStateException(edge + " already exists for " + origin);
         } else if ((conflict = edges.stream().filter(e -> e.destination().equals(edge.destination())).findAny()).isPresent()) {
-            throw new IllegalStateException("Conflicting edge exists for " + vertex + ", existing=" + conflict.get() + ", new=" + edge);
+            throw new IllegalStateException("Conflicting edge exists for " + origin + ", existing=" + conflict.get() + ", new=" + edge);
         }
         edges.add(edge);
     }
 
     @Override
-    public int edgeCount() {
-        return edges.values().stream().mapToInt(Collection::size).sum();
+    public long edgeCount() {
+        return edges.values().stream().mapToLong(Collection::size).sum();
     }
 
     @Override
-    public boolean containsEdge(Edge<Vertex> edge) {
+    public boolean containsEdge(@NonNull Edge<V> edge) {
         return edges.values().stream().anyMatch(value -> value.contains(edge));
     }
 
