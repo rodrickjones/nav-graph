@@ -7,9 +7,7 @@ import com.rodrickjones.navgraph.graph.hierarchical.HierarchicalGraph;
 import com.rodrickjones.navgraph.requirement.RequirementContext;
 import com.rodrickjones.navgraph.util.Frontier;
 import com.rodrickjones.navgraph.vertex.Vertex;
-import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -70,16 +68,12 @@ public class Hierarchical extends PathfindingAlgorithm<HierarchicalGraph<Graph<V
         }
         if (leanGraph != null) {
             log.trace("Lean graph found in {}ms: {}", System.currentTimeMillis() - start, leanGraph);
-            PathfindingAlgorithm<Graph<Graph<Vertex>>, Vertex> pathfindingAlgorithm = new AStar<Graph<Graph<Vertex>>>(leanGraph) {
-                @Override
-                protected @NotNull Stream<Edge<Vertex>> edges(@NonNull Vertex vertex) {
-                    return graph.vertices()
+            PathfindingAlgorithm<Graph<Graph<Vertex>>, Vertex> pathfindingAlgorithm =
+                    new AStar<>(leanGraph, (graph, vertex) -> graph.vertices()
                             .filter(subGraph -> subGraph.containsVertex(vertex))
                             .findFirst()
                             .map(subGraph -> subGraph.edges(vertex))
-                            .orElseGet(Stream::empty);
-                }
-            };
+                            .orElseGet(Stream::empty));
             Path<Vertex> path = pathfindingAlgorithm.findPath(origin, destinations, context);
             if (path != null) {
                 log.trace("Path created: {}ms", System.currentTimeMillis() - start);
